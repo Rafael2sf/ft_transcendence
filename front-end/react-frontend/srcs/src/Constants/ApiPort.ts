@@ -1,0 +1,1 @@
+export const url = `http://${import.meta.env.VITE_BASEURL}:3000/api`;

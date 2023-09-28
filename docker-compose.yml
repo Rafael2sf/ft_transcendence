@@ -1,0 +1,95 @@
+version: '3.9'
+services:
+  react:
+    container_name: frontend
+    build:
+      context: ./front-end/react-frontend
+      dockerfile: Dockerfile
+    networks:
+      - trans
+    ports:
+      - "5173:5173"
+    env_file:
+      - .env
+
+  api:
+    depends_on:
+      - db
+    container_name: api
+    build:
+      context: ./back-end
+      dockerfile: ./apps/api/Dockerfile
+      target: prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - trans
+    ports:
+      - 3000:3000
+
+  chat:
+    depends_on:
+      - db
+      - api
+    container_name: chat
+    build:
+      context: ./back-end
+      dockerfile: ./apps/chat/Dockerfile
+      target: prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - trans
+    expose:
+      - "3001"
+
+  game:
+    depends_on:
+      - db
+      - api
+    container_name: game
+    build:
+      context: ./back-end
+      dockerfile: ./apps/game/Dockerfile
+      target: prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - trans
+    expose:
+      - "3002"
+
+  db:
+    container_name: db
+    image: postgres:bullseye
+    volumes:
+      - pgdata:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - trans
+    ports:
+      - 5432:5432
+
+  adminer:
+    depends_on:
+      - db
+    container_name: adminer
+    image: adminer
+    restart: always
+    ports:
+      - 8081:8080
+    networks:
+      - trans
+
+networks:
+  trans:
+    name: trans
+    driver: bridge
+
+volumes:
+  pgdata:

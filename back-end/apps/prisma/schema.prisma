@@ -1,0 +1,231 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserState {
+  OFFLINE
+  ONLINE
+  IN_GAME
+}
+
+enum ChannelType {
+  PUBLIC
+  PROTECTED
+  PRIVATE
+}
+
+enum ChannelRole {
+  BANNED
+  NONE
+  USER
+  ADMIN
+  OWNER
+}
+
+enum DirectState {
+  BLOCKED
+  NONE
+  INVITED
+  FRIEND
+}
+
+enum GameScope {
+  PUBLIC
+  PRIVATE
+}
+
+enum GameState {
+  WAITING_FOR_PLAYERS
+  READY_TO_PLAY
+  IN_PROGRESS
+  FINISHED
+}
+
+enum GameTexType {
+  color
+  image
+}
+
+enum AchievementKind {
+  GAME
+  LADDER
+}
+
+model Channel {
+  id       String      @id @default(uuid()) @db.Uuid
+  name     String      @db.VarChar(32)
+  owner    User        @relation(fields: [owner_id], references: [id])
+  owner_id Int
+  type     ChannelType
+  password String?     @db.VarChar(72)
+
+  UserChannel    UserChannel[]
+  ChannelMessage ChannelMessage[]
+
+  @@unique([name, owner_id])
+  @@index([name, owner_id])
+}
+
+model UserChannel {
+  id         Int     @id @default(autoincrement())
+  user       User    @relation(fields: [user_id], references: [id])
+  user_id    Int
+  channel    Channel @relation(fields: [channel_id], references: [id], onDelete: Cascade)
+  channel_id String  @db.Uuid
+
+  role        ChannelRole
+  ChannelMute ChannelMute[]
+
+  @@unique([user_id, channel_id])
+  @@index([user_id, channel_id, role])
+}
+
+model Direct {
+  id        Int         @id @default(autoincrement())
+  user      User        @relation("user", fields: [user_id], references: [id])
+  user_id   Int
+  target    User        @relation("target", fields: [target_id], references: [id])
+  target_id Int
+  state     DirectState
+
+  DirectMessage DirectMessage[]
+
+  @@unique([user_id, target_id])
+  @@index([user_id, target_id])
+}
+
+model DirectMessage {
+  id        Int      @id @default(autoincrement())
+  direct    Direct   @relation(fields: [direct_id], references: [id])
+  direct_id Int
+  text      String   @db.VarChar(1000)
+  createdAt DateTime @default(now())
+  game      Game?    @relation(fields: [game_id], references: [id])
+  game_id   Int?
+
+  @@index([direct_id])
+}
+
+model ChannelMessage {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [user_id], references: [id])
+  user_id    Int
+  channel    Channel  @relation(fields: [channel_id], references: [id], onDelete: Cascade)
+  channel_id String   @db.Uuid
+  text       String   @db.VarChar(1000)
+  createdAt  DateTime @default(now())
+  game       Game?    @relation(fields: [game_id], references: [id])
+  game_id    Int?
+
+  @@index([channel_id])
+}
+
+model ChannelMute {
+  id              Int         @id @default(autoincrement())
+  user_channel    UserChannel @relation(fields: [user_channel_id], references: [id], onDelete: Cascade)
+  user_channel_id Int
+  seconds         Int
+  createdAt       DateTime    @default(now())
+
+  @@unique([user_channel_id])
+  @@index(user_channel_id)
+}
+
+model User {
+  id                    Int        @id @default(autoincrement())
+  status                UserState? @default(ONLINE)
+  ladder                Int?       @default(0)
+  name                  String     @unique @db.VarChar(30)
+  intraname             String     @unique @db.VarChar(50)
+  picture               String?    @default("/profile.png")
+  direct_user           Direct[]   @relation("user")
+  direct_target         Direct[]   @relation("target")
+  is_two_factor_enabled Boolean    @default(false)
+  two_factor_secret     String?
+
+  Channel        Channel[]
+  UserChannel    UserChannel[]
+  ChannelMessage ChannelMessage[]
+
+  image Image?
+
+  games        GameUser[]
+  achievements AchievementUser[]
+
+  @@map("User")
+}
+
+model Image {
+  id      Int   @id @default(autoincrement())
+  user_id Int   @unique
+  user    User  @relation(fields: [user_id], references: [id])
+  data    Bytes @db.ByteA
+
+  @@index([user_id])
+}
+
+model Game {
+  id          Int        @id @default(autoincrement())
+  scope       GameScope
+  state       GameState  @default(WAITING_FOR_PLAYERS)
+  max_score   Int
+  started_at  DateTime?
+  ended_at    DateTime?
+  games_users GameUser[]
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+
+  ChannelMessage ChannelMessage[]
+  DirectMessage  DirectMessage[]
+
+  @@unique([id])
+  @@index([state])
+}
+
+model GameUser {
+  id         Int         @id @default(autoincrement())
+  game       Game        @relation(fields: [game_id], references: [id])
+  game_id    Int
+  user       User        @relation(fields: [user_id], references: [id])
+  user_id    Int
+  tex        String
+  tex_type   GameTexType
+  won        Boolean     @default(false)
+  score      Int         @default(0)
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+
+  @@unique([game_id, user_id])
+  @@index([game_id])
+}
+
+model Achievement {
+  id                 Int               @id
+  title              String            @unique
+  description        String
+  kind               AchievementKind
+  image              String
+  achievements_users AchievementUser[]
+}
+
+model AchievementUser {
+  id             Int         @id @default(autoincrement())
+  user           User        @relation(fields: [user_id], references: [id])
+  user_id        Int
+  achievement    Achievement @relation(fields: [achievement_id], references: [id])
+  achievement_id Int
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([user_id, achievement_id])
+  @@index([id])
+}

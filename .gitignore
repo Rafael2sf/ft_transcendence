@@ -1,0 +1,54 @@
+
+# Credentials
+**/*.env*
+!**/*.env.template
+!**/*.env.sample
+
+# Version files
+**/.*.swp
+
+# node
+# **/*package*.json
+**/node_modules
+
+# Debug
+**/*.rest
+
+# ------------- NestJS generated .gitignore --------------
+
+# compiled output
+**/dist
+server/dist
+server/node_modules
+
+# Logs
+**/logs
+**/*.log
+**/npm-debug.log*
+**/pnpm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/lerna-debug.log*
+
+# OS
+**/.DS_Store
+
+# Tests
+**/coverage
+**/.nyc_output
+
+# IDEs and editors
+**/.idea
+**/.project
+**/.classpath
+**/.c9/
+**/*.launch
+**/.settings/
+**/*.sublime-workspace
+
+# IDE - VSCode
+**/.vscode/*
+**/!.vscode/settings.json
+**/!.vscode/tasks.json
+**/!.vscode/launch.json
+**/!.vscode/extensions.json

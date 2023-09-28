@@ -1,0 +1,4 @@
+srcs/node_modules/
+srcs/.vite/
+.gitignore
+notes.txt
